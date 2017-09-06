@@ -1,0 +1,213 @@
+tosca_definitions_version: alien_dsl_1_4_0
+
+metadata:
+  template_name: TestDataAvenue
+  template_version: 0.1.0-SNAPSHOT
+  template_author: admin
+
+description: "This archive has been created with alien4cloud."
+
+imports:
+  - docker-types:1.4.0-SNAPSHOT
+  - tosca-normative-types:1.0.0-ALIEN14
+  - dataavenue-docker-types:1.4.0-SNAPSHOT
+
+topology_template:
+  node_templates:
+    Dataavenue:
+      type: alien.nodes.Application.Docker.Dataavenue
+      properties:
+        docker_env_vars: 
+          LOG_LEVEL: ""
+        cpu_share: 1.0
+        mem_share: "128 MB"
+      requirements:
+        - mysql_db:
+            node: Database
+            capability: tosca.capabilities.Endpoint.Database
+            relationship: tosca.relationships.ConnectsTo
+      capabilities:
+        dataavenue_app:
+          properties:
+            docker_bridge_port_mapping: 0
+            port: 3000
+            protocol: tcp
+            secure: false
+            network_name: PRIVATE
+            initiator: source
+        scalable:
+          properties:
+            min_instances: 1
+            max_instances: 1
+            default_instances: 1
+    Database:
+      type: tosca.nodes.Database
+      requirements:
+        - dependency:
+            node: Dataavenue
+            capability: tosca.capabilities.Node
+            relationship: tosca.relationships.DependsOn
+      capabilities:
+        database_endpoint:
+          properties:
+            protocol: tcp
+            secure: false
+            network_name: PRIVATE
+            initiator: source
+  workflows:
+    install:
+      steps:
+        Dataavenue_initial:
+          node: Dataavenue
+          activity:
+            set_state: initial
+          on-success:
+            - Dataavenue_creating
+        Dataavenue_creating:
+          node: Dataavenue
+          activity:
+            set_state: creating
+          on-success:
+            - create_Dataavenue
+        create_Dataavenue:
+          node: Dataavenue
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.create
+          on-success:
+            - Dataavenue_created
+        Dataavenue_created:
+          node: Dataavenue
+          activity:
+            set_state: created
+          on-success:
+            - Dataavenue_configuring
+        Dataavenue_configuring:
+          node: Dataavenue
+          activity:
+            set_state: configuring
+          on-success:
+            - configure_Dataavenue
+        configure_Dataavenue:
+          node: Dataavenue
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.configure
+          on-success:
+            - Dataavenue_configured
+        Dataavenue_configured:
+          node: Dataavenue
+          activity:
+            set_state: configured
+          on-success:
+            - Dataavenue_starting
+        Dataavenue_starting:
+          node: Dataavenue
+          activity:
+            set_state: starting
+          on-success:
+            - start_Dataavenue
+        start_Dataavenue:
+          node: Dataavenue
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.start
+          on-success:
+            - Dataavenue_started
+        Dataavenue_started:
+          node: Dataavenue
+          activity:
+            set_state: started
+        Database_install:
+          node: Database
+          activity:
+            delegate: install
+          on-success:
+            - Dataavenue_initial
+    uninstall:
+      steps:
+        Dataavenue_stopping:
+          node: Dataavenue
+          activity:
+            set_state: stopping
+          on-success:
+            - stop_Dataavenue
+        stop_Dataavenue:
+          node: Dataavenue
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.stop
+          on-success:
+            - Dataavenue_stopped
+        Dataavenue_stopped:
+          node: Dataavenue
+          activity:
+            set_state: stopped
+          on-success:
+            - Dataavenue_deleting
+        Dataavenue_deleting:
+          node: Dataavenue
+          activity:
+            set_state: deleting
+          on-success:
+            - delete_Dataavenue
+        delete_Dataavenue:
+          node: Dataavenue
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.delete
+          on-success:
+            - Dataavenue_deleted
+        Dataavenue_deleted:
+          node: Dataavenue
+          activity:
+            set_state: deleted
+          on-success:
+            - Database_uninstall
+        Database_uninstall:
+          node: Database
+          activity:
+            delegate: uninstall
+    start:
+      steps:
+        Dataavenue_starting:
+          node: Dataavenue
+          activity:
+            set_state: starting
+          on-success:
+            - start_Dataavenue
+        start_Dataavenue:
+          node: Dataavenue
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.start
+          on-success:
+            - Dataavenue_started
+        Dataavenue_started:
+          node: Dataavenue
+          activity:
+            set_state: started
+        Database_start:
+          node: Database
+          activity:
+            delegate: start
+          on-success:
+            - Dataavenue_starting
+    stop:
+      steps:
+        Dataavenue_stopping:
+          node: Dataavenue
+          activity:
+            set_state: stopping
+          on-success:
+            - stop_Dataavenue
+        stop_Dataavenue:
+          node: Dataavenue
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.stop
+          on-success:
+            - Dataavenue_stopped
+        Dataavenue_stopped:
+          node: Dataavenue
+          activity:
+            set_state: stopped
+          on-success:
+            - Database_stop
+        Database_stop:
+          node: Database
+          activity:
+            delegate: stop
