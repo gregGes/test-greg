@@ -8,41 +8,319 @@ metadata:
 description: "This archive has been created with alien4cloud."
 
 imports:
+  - docker-types:1.4.0-SNAPSHOT
   - tosca-normative-types:1.0.0-ALIEN14
+  - dataavenue-docker-types:1.4.0-SNAPSHOT
 
 topology_template:
   node_templates:
-    Database:
-      type: tosca.nodes.Database
+    Mysql:
+      type: alien.datatype.docker.cli-args.Mysql
+      properties:
+        docker_env_vars: 
+          LOG_LEVEL: ""
+        cpu_share: 1.0
+        mem_share: "128 MB"
       capabilities:
-        database_endpoint:
+        mysql:
           properties:
+            docker_bridge_port_mapping: 0
+            port: 27017
             protocol: tcp
             secure: false
             network_name: PRIVATE
             initiator: source
+        scalable:
+          properties:
+            min_instances: 1
+            max_instances: 1
+            default_instances: 1
+    Dataavenue:
+      type: alien.nodes.Application.Docker.Dataavenue
+      properties:
+        docker_env_vars: 
+          LOG_LEVEL: ""
+        cpu_share: 1.0
+        mem_share: "128 MB"
+      requirements:
+        - mysql_db:
+            node: Mysql
+            capability: alien.capabilities.endpoint.docker.Mysql
+            relationship: tosca.relationships.ConnectsTo
+      capabilities:
+        dataavenue_app:
+          properties:
+            docker_bridge_port_mapping: 0
+            port: 3000
+            protocol: tcp
+            secure: false
+            network_name: PRIVATE
+            initiator: source
+        scalable:
+          properties:
+            min_instances: 1
+            max_instances: 1
+            default_instances: 1
   workflows:
     install:
       steps:
-        Database_install:
-          node: Database
+        Mysql_initial:
+          node: Mysql
           activity:
-            delegate: install
+            set_state: initial
+          on-success:
+            - Mysql_creating
+        Mysql_creating:
+          node: Mysql
+          activity:
+            set_state: creating
+          on-success:
+            - create_Mysql
+        create_Mysql:
+          node: Mysql
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.create
+          on-success:
+            - Mysql_created
+        Mysql_created:
+          node: Mysql
+          activity:
+            set_state: created
+          on-success:
+            - Mysql_configuring
+        Mysql_configuring:
+          node: Mysql
+          activity:
+            set_state: configuring
+          on-success:
+            - configure_Mysql
+        configure_Mysql:
+          node: Mysql
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.configure
+          on-success:
+            - Mysql_configured
+        Mysql_configured:
+          node: Mysql
+          activity:
+            set_state: configured
+          on-success:
+            - Mysql_starting
+        Mysql_starting:
+          node: Mysql
+          activity:
+            set_state: starting
+          on-success:
+            - start_Mysql
+        start_Mysql:
+          node: Mysql
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.start
+          on-success:
+            - Mysql_started
+        Mysql_started:
+          node: Mysql
+          activity:
+            set_state: started
+          on-success:
+            - Dataavenue_configuring
+        Dataavenue_initial:
+          node: Dataavenue
+          activity:
+            set_state: initial
+          on-success:
+            - Dataavenue_creating
+        Dataavenue_creating:
+          node: Dataavenue
+          activity:
+            set_state: creating
+          on-success:
+            - create_Dataavenue
+        create_Dataavenue:
+          node: Dataavenue
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.create
+          on-success:
+            - Dataavenue_created
+        Dataavenue_created:
+          node: Dataavenue
+          activity:
+            set_state: created
+          on-success:
+            - Mysql_configuring
+            - Dataavenue_configuring
+        Dataavenue_configuring:
+          node: Dataavenue
+          activity:
+            set_state: configuring
+          on-success:
+            - configure_Dataavenue
+        configure_Dataavenue:
+          node: Dataavenue
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.configure
+          on-success:
+            - Dataavenue_configured
+        Dataavenue_configured:
+          node: Dataavenue
+          activity:
+            set_state: configured
+          on-success:
+            - Dataavenue_starting
+        Dataavenue_starting:
+          node: Dataavenue
+          activity:
+            set_state: starting
+          on-success:
+            - start_Dataavenue
+        start_Dataavenue:
+          node: Dataavenue
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.start
+          on-success:
+            - Dataavenue_started
+        Dataavenue_started:
+          node: Dataavenue
+          activity:
+            set_state: started
     uninstall:
       steps:
-        Database_uninstall:
-          node: Database
+        Mysql_stopping:
+          node: Mysql
           activity:
-            delegate: uninstall
+            set_state: stopping
+          on-success:
+            - stop_Mysql
+        stop_Mysql:
+          node: Mysql
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.stop
+          on-success:
+            - Mysql_stopped
+        Mysql_stopped:
+          node: Mysql
+          activity:
+            set_state: stopped
+          on-success:
+            - Mysql_deleting
+        Mysql_deleting:
+          node: Mysql
+          activity:
+            set_state: deleting
+          on-success:
+            - delete_Mysql
+        delete_Mysql:
+          node: Mysql
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.delete
+          on-success:
+            - Mysql_deleted
+        Mysql_deleted:
+          node: Mysql
+          activity:
+            set_state: deleted
+        Dataavenue_stopping:
+          node: Dataavenue
+          activity:
+            set_state: stopping
+          on-success:
+            - stop_Dataavenue
+        stop_Dataavenue:
+          node: Dataavenue
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.stop
+          on-success:
+            - Dataavenue_stopped
+        Dataavenue_stopped:
+          node: Dataavenue
+          activity:
+            set_state: stopped
+          on-success:
+            - Dataavenue_deleting
+            - Mysql_stopping
+        Dataavenue_deleting:
+          node: Dataavenue
+          activity:
+            set_state: deleting
+          on-success:
+            - delete_Dataavenue
+        delete_Dataavenue:
+          node: Dataavenue
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.delete
+          on-success:
+            - Dataavenue_deleted
+        Dataavenue_deleted:
+          node: Dataavenue
+          activity:
+            set_state: deleted
     start:
       steps:
-        Database_start:
-          node: Database
+        Mysql_starting:
+          node: Mysql
           activity:
-            delegate: start
+            set_state: starting
+          on-success:
+            - start_Mysql
+        start_Mysql:
+          node: Mysql
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.start
+          on-success:
+            - Mysql_started
+        Mysql_started:
+          node: Mysql
+          activity:
+            set_state: started
+          on-success:
+            - Dataavenue_starting
+        Dataavenue_starting:
+          node: Dataavenue
+          activity:
+            set_state: starting
+          on-success:
+            - start_Dataavenue
+        start_Dataavenue:
+          node: Dataavenue
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.start
+          on-success:
+            - Dataavenue_started
+        Dataavenue_started:
+          node: Dataavenue
+          activity:
+            set_state: started
     stop:
       steps:
-        Database_stop:
-          node: Database
+        Mysql_stopping:
+          node: Mysql
           activity:
-            delegate: stop
+            set_state: stopping
+          on-success:
+            - stop_Mysql
+        stop_Mysql:
+          node: Mysql
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.stop
+          on-success:
+            - Mysql_stopped
+        Mysql_stopped:
+          node: Mysql
+          activity:
+            set_state: stopped
+        Dataavenue_stopping:
+          node: Dataavenue
+          activity:
+            set_state: stopping
+          on-success:
+            - stop_Dataavenue
+        stop_Dataavenue:
+          node: Dataavenue
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.stop
+          on-success:
+            - Dataavenue_stopped
+        Dataavenue_stopped:
+          node: Dataavenue
+          activity:
+            set_state: stopped
