@@ -7,6 +7,12 @@ metadata:
 
 description: "This archive has been created with alien4cloud."
 
+imports:
+  - nodecellar-docker-types:1.4.0-SNAPSHOT
+  - docker-types:1.4.0-SNAPSHOT
+  - tosca-normative-types:1.0.0-ALIEN14
+  - dataavenue-docker-types:1.4.0-SNAPSHOT
+
 topology_template:
   inputs:
     docker_run_args:
@@ -19,8 +25,311 @@ topology_template:
       type: list
       required: false
   node_templates:
+    Mongo:
+      type: alien.nodes.Application.Docker.Mongo
+      properties:
+        cpu_share: 1.0
+        mem_share: "128 MB"
+      capabilities:
+        mongo_db:
+          properties:
+            docker_bridge_port_mapping: 0
+            port: 27017
+            protocol: tcp
+            secure: false
+            network_name: PRIVATE
+            initiator: source
+        scalable:
+          properties:
+            min_instances: 1
+            max_instances: 1
+            default_instances: 1
+    Dataavenue:
+      type: alien.nodes.Application.Docker.Dataavenue
+      properties:
+        docker_env_vars: 
+          LOG_LEVEL: ""
+        cpu_share: 1.0
+        mem_share: "128 MB"
+      requirements:
+        - mysql_db:
+            node: Mongo
+            capability: alien.capabilities.endpoint.docker.Mongo
+            relationship: tosca.relationships.ConnectsTo
+      capabilities:
+        dataavenue_app:
+          properties:
+            docker_bridge_port_mapping: 0
+            port: 3000
+            protocol: tcp
+            secure: false
+            network_name: PRIVATE
+            initiator: source
+        scalable:
+          properties:
+            min_instances: 1
+            max_instances: 1
+            default_instances: 1
   workflows:
     install:
+      steps:
+        Mongo_initial:
+          node: Mongo
+          activity:
+            set_state: initial
+          on-success:
+            - Mongo_creating
+        Mongo_creating:
+          node: Mongo
+          activity:
+            set_state: creating
+          on-success:
+            - create_Mongo
+        create_Mongo:
+          node: Mongo
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.create
+          on-success:
+            - Mongo_created
+        Mongo_created:
+          node: Mongo
+          activity:
+            set_state: created
+          on-success:
+            - Mongo_configuring
+        Mongo_configuring:
+          node: Mongo
+          activity:
+            set_state: configuring
+          on-success:
+            - configure_Mongo
+        configure_Mongo:
+          node: Mongo
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.configure
+          on-success:
+            - Mongo_configured
+        Mongo_configured:
+          node: Mongo
+          activity:
+            set_state: configured
+          on-success:
+            - Mongo_starting
+        Mongo_starting:
+          node: Mongo
+          activity:
+            set_state: starting
+          on-success:
+            - start_Mongo
+        start_Mongo:
+          node: Mongo
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.start
+          on-success:
+            - Mongo_started
+        Mongo_started:
+          node: Mongo
+          activity:
+            set_state: started
+          on-success:
+            - Dataavenue_configuring
+        Dataavenue_initial:
+          node: Dataavenue
+          activity:
+            set_state: initial
+          on-success:
+            - Dataavenue_creating
+        Dataavenue_creating:
+          node: Dataavenue
+          activity:
+            set_state: creating
+          on-success:
+            - create_Dataavenue
+        create_Dataavenue:
+          node: Dataavenue
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.create
+          on-success:
+            - Dataavenue_created
+        Dataavenue_created:
+          node: Dataavenue
+          activity:
+            set_state: created
+          on-success:
+            - Dataavenue_configuring
+            - Mongo_configuring
+        Dataavenue_configuring:
+          node: Dataavenue
+          activity:
+            set_state: configuring
+          on-success:
+            - configure_Dataavenue
+        configure_Dataavenue:
+          node: Dataavenue
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.configure
+          on-success:
+            - Dataavenue_configured
+        Dataavenue_configured:
+          node: Dataavenue
+          activity:
+            set_state: configured
+          on-success:
+            - Dataavenue_starting
+        Dataavenue_starting:
+          node: Dataavenue
+          activity:
+            set_state: starting
+          on-success:
+            - start_Dataavenue
+        start_Dataavenue:
+          node: Dataavenue
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.start
+          on-success:
+            - Dataavenue_started
+        Dataavenue_started:
+          node: Dataavenue
+          activity:
+            set_state: started
     uninstall:
+      steps:
+        Mongo_stopping:
+          node: Mongo
+          activity:
+            set_state: stopping
+          on-success:
+            - stop_Mongo
+        stop_Mongo:
+          node: Mongo
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.stop
+          on-success:
+            - Mongo_stopped
+        Mongo_stopped:
+          node: Mongo
+          activity:
+            set_state: stopped
+          on-success:
+            - Mongo_deleting
+        Mongo_deleting:
+          node: Mongo
+          activity:
+            set_state: deleting
+          on-success:
+            - delete_Mongo
+        delete_Mongo:
+          node: Mongo
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.delete
+          on-success:
+            - Mongo_deleted
+        Mongo_deleted:
+          node: Mongo
+          activity:
+            set_state: deleted
+        Dataavenue_stopping:
+          node: Dataavenue
+          activity:
+            set_state: stopping
+          on-success:
+            - stop_Dataavenue
+        stop_Dataavenue:
+          node: Dataavenue
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.stop
+          on-success:
+            - Dataavenue_stopped
+        Dataavenue_stopped:
+          node: Dataavenue
+          activity:
+            set_state: stopped
+          on-success:
+            - Mongo_stopping
+            - Dataavenue_deleting
+        Dataavenue_deleting:
+          node: Dataavenue
+          activity:
+            set_state: deleting
+          on-success:
+            - delete_Dataavenue
+        delete_Dataavenue:
+          node: Dataavenue
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.delete
+          on-success:
+            - Dataavenue_deleted
+        Dataavenue_deleted:
+          node: Dataavenue
+          activity:
+            set_state: deleted
     start:
+      steps:
+        Mongo_starting:
+          node: Mongo
+          activity:
+            set_state: starting
+          on-success:
+            - start_Mongo
+        start_Mongo:
+          node: Mongo
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.start
+          on-success:
+            - Mongo_started
+        Mongo_started:
+          node: Mongo
+          activity:
+            set_state: started
+          on-success:
+            - Dataavenue_starting
+        Dataavenue_starting:
+          node: Dataavenue
+          activity:
+            set_state: starting
+          on-success:
+            - start_Dataavenue
+        start_Dataavenue:
+          node: Dataavenue
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.start
+          on-success:
+            - Dataavenue_started
+        Dataavenue_started:
+          node: Dataavenue
+          activity:
+            set_state: started
     stop:
+      steps:
+        Mongo_stopping:
+          node: Mongo
+          activity:
+            set_state: stopping
+          on-success:
+            - stop_Mongo
+        stop_Mongo:
+          node: Mongo
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.stop
+          on-success:
+            - Mongo_stopped
+        Mongo_stopped:
+          node: Mongo
+          activity:
+            set_state: stopped
+        Dataavenue_stopping:
+          node: Dataavenue
+          activity:
+            set_state: stopping
+          on-success:
+            - stop_Dataavenue
+        stop_Dataavenue:
+          node: Dataavenue
+          activity:
+            call_operation: tosca.interfaces.node.lifecycle.Standard.stop
+          on-success:
+            - Dataavenue_stopped
+        Dataavenue_stopped:
+          node: Dataavenue
+          activity:
+            set_state: stopped
