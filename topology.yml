@@ -20,6 +20,9 @@ topology_template:
     docker_run_args_0:
       type: list
       required: false
+    docker_run_args_1:
+      type: list
+      required: false
   node_templates:
     Dataavenue:
       type: alien.nodes.Application.Docker.Dataavenue
@@ -28,7 +31,8 @@ topology_template:
           LOG_LEVEL: ""
         cpu_share: 1.0
         mem_share: "128 MB"
-        docker_run_args: { get_input: docker_run_args_0 }
+        docker_run_args: 
+          - "{ get_input: databaseip }"
       requirements:
         - mysql_db:
             node: Mysql
@@ -75,6 +79,8 @@ topology_template:
             max_instances: 1
             default_instances: 1
   outputs:
+    Dataavenue_docker_run_args:
+      value: { get_property: [ Dataavenue, docker_run_args ] }
     Dataavenue_endpoint:
       value: { get_attribute: [ Dataavenue, endpoint ] }
   workflows:
