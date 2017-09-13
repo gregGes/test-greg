@@ -13,6 +13,13 @@ imports:
   - dataavenue-docker-types:1.4.0-SNAPSHOT
 
 topology_template:
+  inputs:
+    docker_run_args:
+      type: list
+      required: false
+    docker_run_args_0:
+      type: list
+      required: false
   node_templates:
     Dataavenue:
       type: alien.nodes.Application.Docker.Dataavenue
@@ -21,6 +28,7 @@ topology_template:
           LOG_LEVEL: ""
         cpu_share: 1.0
         mem_share: "128 MB"
+        docker_run_args: { get_input: docker_run_args_0 }
       requirements:
         - mysql_db:
             node: Mysql
@@ -33,6 +41,7 @@ topology_template:
             port: 3000
             protocol: tcp
             secure: false
+            port_name: 3000
             network_name: PRIVATE
             initiator: source
         scalable:
