@@ -37,6 +37,7 @@ topology_template:
     Dataavenue:
       type: alien.nodes.Application.Docker.Dataavenue
       properties:
+        docker_run_cmd: "{ get_inputs: ARG_MONGO_HOST }"
         docker_env_vars: 
           LOG_LEVEL: ""
         cpu_share: 1.0
