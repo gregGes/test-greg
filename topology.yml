@@ -44,14 +44,18 @@ topology_template:
       type: alien.nodes.Application.Docker.Mysql
       properties:
         docker_env_vars: 
-          LOG_LEVEL: ""
+          LOG_LEVEL: ERROR
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: dataavenue
+          MYSQL_USER: da
+          MYSQL_PASSWORD: da
         cpu_share: 1.0
         mem_share: "128 MB"
       capabilities:
         mysql:
           properties:
             docker_bridge_port_mapping: 0
-            port: 27017
+            port: 3306
             protocol: tcp
             secure: false
             network_name: PRIVATE
