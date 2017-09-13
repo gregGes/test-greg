@@ -3,7 +3,7 @@ tosca_definitions_version: alien_dsl_1_4_0
 metadata:
   template_name: TestDataAvenue
   template_version: 0.1.0-SNAPSHOT
-  template_author: gregoire
+  template_author: admin
 
 description: "This archive has been created with alien4cloud."
 
@@ -74,6 +74,9 @@ topology_template:
             min_instances: 1
             max_instances: 1
             default_instances: 1
+  outputs:
+    Dataavenue_endpoint:
+      value: { get_attribute: [ Dataavenue, endpoint ] }
   workflows:
     install:
       steps:
