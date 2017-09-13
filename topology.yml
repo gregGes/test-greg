@@ -3,7 +3,7 @@ tosca_definitions_version: alien_dsl_1_4_0
 metadata:
   template_name: TestDataAvenue
   template_version: 0.1.0-SNAPSHOT
-  template_author: admin
+  template_author: gregoire
 
 description: "This archive has been created with alien4cloud."
 
@@ -14,16 +14,6 @@ imports:
   - dataavenue-docker-types:1.4.0-SNAPSHOT
 
 topology_template:
-  inputs:
-    docker_run_args:
-      type: list
-      required: false
-    docker_run_args_0:
-      type: list
-      required: false
-    docker_run_args_1:
-      type: list
-      required: false
   node_templates:
     Mongo:
       type: alien.nodes.Application.Docker.Mongo
